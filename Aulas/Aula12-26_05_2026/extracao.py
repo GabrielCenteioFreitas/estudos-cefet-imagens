@@ -1,4 +1,4 @@
-nomeImagem = 'bolas.jpg'
+nomeImagem = 'formas.jpg'
 
 import cv2
 import numpy
@@ -11,7 +11,7 @@ cinza = numpy.zeros((imagem.shape[0], imagem.shape[1]), dtype=numpy.uint8)
 pretoBranco = numpy.zeros((imagem.shape[0], imagem.shape[1]), dtype=numpy.uint8)
 histograma = numpy.zeros(256, dtype=int)
 
-divisor = 225
+divisor = 80
 
 for i in range(0, imagem.shape[0]):
   for j in range(0, imagem.shape[1]):
@@ -69,64 +69,33 @@ def intersecao(img1, img2, procurandoPreto = False):
         imgIntersecao[i, j] = (255 if procurandoPreto else 0)
   return imgIntersecao
 
-def unir(img1, img2, procurandoPreto = False):
-  imgUnida = numpy.zeros((img1.shape[0], img1.shape[1]), dtype=numpy.uint8)
-  for i in range(0, img1.shape[0]):
-    for j in range(0, img1.shape[1]):
-      if procurandoPreto:
-        if img1[i][j] == 0 or img2[i][j] == 0:
-          imgUnida[i, j] = 0
-        else:
-          imgUnida[i, j] = 255
-      else:
-        if img1[i][j] == 255 or img2[i][j] == 255:
-          imgUnida[i, j] = 255
-        else:
-          imgUnida[i, j] = 0
-  return imgUnida
-
-def inverte(img):
-  imgInvertida = numpy.zeros((img.shape[0], img.shape[1]), dtype=numpy.uint8)
-  for i in range(0, img.shape[0]):
-    for j in range(0, img.shape[1]):
-      if img[i][j] == 255:
-        imgInvertida[i, j] = 0
-      else:
-        imgInvertida[i, j] = 255
-  return imgInvertida
-
 def resize(img):
-  return cv2.resize(img, (287, 285), interpolation=cv2.INTER_AREA)
+  return cv2.resize(img, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_AREA)
 
 mascara = [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
 
-def preencher(img, pixels, buracosPretos = False):
-  imgInvertida = inverte(img)
-  imgBuracos = numpy.ones((img.shape[0], img.shape[1]), dtype=numpy.uint8) * (0 if buracosPretos else 255)
-  imgBuracosAnterior = numpy.ones((img.shape[0], img.shape[1]), dtype=numpy.uint8) * (0 if buracosPretos else 255)
+def extrairComponentesConectados(img, pixels, componentesPretos = False):
+  imgExtraida = numpy.ones((img.shape[0], img.shape[1]), dtype=numpy.uint8) * (255 if componentesPretos else 0)
+  imgExtraidaAnterior = numpy.ones((img.shape[0], img.shape[1]), dtype=numpy.uint8) * (255 if componentesPretos else 0)
 
   for pixel in pixels:  
-    imgBuracos[pixel[1], pixel[0]] = 255 if buracosPretos else 0
+    imgExtraida[pixel[1], pixel[0]] = 0 if componentesPretos else 255
 
-  cv2.imshow("Buracos Iniciais", resize(imgBuracos))
+  cv2.imshow("Inicial", resize(imgExtraida))
 
-  while not numpy.array_equal(imgBuracosAnterior, imgBuracos):
-    imgBuracosAnterior = imgBuracos.copy()
-    imgBuracos = hitQtd(1, imgBuracos, mascara, not buracosPretos)
-    imgBuracos = intersecao(imgBuracos, imgInvertida, not buracosPretos)
+  while not numpy.array_equal(imgExtraidaAnterior, imgExtraida):
+    imgExtraidaAnterior = imgExtraida.copy()
+    imgExtraida = hitQtd(1, imgExtraida, mascara, componentesPretos)
+    imgExtraida = intersecao(imgExtraida, img, componentesPretos)
 
-  cv2.imshow("Invertida", resize(imgInvertida))
-  cv2.imshow("Buracos", resize(imgBuracos))
-  
-  imgPreenchida = unir(img, imgBuracos)
-  return imgPreenchida
+  return imgExtraida
 
 cv2.imshow("Tons de Cinza", resize(cinza))
 cv2.imshow("Preto e Branco", resize(pretoBranco))
 
-pixels = [[33, 33], [103, 27], [200, 25], [143, 83], [258, 80], [53, 90], [3, 102], [100, 114], [232, 132], [59, 166], [132, 172], [284, 199], [216, 209], [32, 254], [130, 260], [224, 264], [284, 274]]
-imgPreenchida = preencher(pretoBranco, pixels, True)
-cv2.imshow("Preenchida", resize(imgPreenchida))
+pixels = [[140, 100]]
+imgExtraida = extrairComponentesConectados(pretoBranco, pixels, True)
+cv2.imshow("Componentes Extraídos", resize(imgExtraida))
 
 pixel = list(range(256))
 fig, ((x0y0)) = plt.subplots(1, 1, sharex=True)
